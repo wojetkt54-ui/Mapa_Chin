@@ -2933,37 +2933,6 @@ function isCoordCollection(value){
 const DEFAULT_DYNASTY_COORDS=new Map(D.map(d=>[d.id,editableCoordsFromCoords(d.coords)]));
 function readSavedDynastyCoords(dynastyId,phaseFrom){
   const bakedCoords=BAKED_MAP_STATE.coords?.[phaseFrom+':'+dynastyId];
-  try{
-    const scopedKey=storageKeyForDynasty(dynastyId,phaseFrom);
-    let raw=localStorage.getItem(scopedKey);
-    if(!raw){
-      raw=localStorage.getItem(legacyStorageKeyForDynasty(dynastyId));
-      // Dawna, zbiorcza edycja Trzech Krolestw dotyczyla pierwszego obszaru, czyli Wei.
-      if(!raw && dynastyId==='wei_tk' && phaseFrom===220){
-        raw=localStorage.getItem(storageKeyForDynasty('three_k',phaseFrom)) ||
-          localStorage.getItem(legacyStorageKeyForDynasty('three_k'));
-      }
-      // Dawna, zbiorcza edycja Poludnia i Polnocy dotyczyla pierwszego obszaru, czyli Poludnia.
-      if(!raw && dynastyId==='south_dynasties' && phaseFrom===420){
-        raw=localStorage.getItem(storageKeyForDynasty('south_north',phaseFrom)) ||
-          localStorage.getItem(legacyStorageKeyForDynasty('south_north'));
-      }
-      if(!raw && dynastyId==='shang') raw=localStorage.getItem(SHANG_STORAGE_KEY);
-      if(raw) localStorage.setItem(scopedKey,raw);
-    }
-    if(raw){
-      const parsed=JSON.parse(raw);
-      if(parsed && parsed.version===2 && isCoordCollection(parsed.coords))return editableCoordsFromCoords(parsed.coords);
-      if(isCoordCollection(parsed))return editableCoordsFromCoords(parsed);
-      // Stary zapis zmienial tylko pierwszy obszar. Zachowaj pozostale czesci z mapy bazowej.
-      if(isCoordRing(parsed)){
-        const coords=deepClone(isCoordCollection(bakedCoords)?bakedCoords:(DEFAULT_DYNASTY_COORDS.get(dynastyId)||[]));
-        if(coords[0]?.[0]) coords[0][0]=editableRing(parsed);
-        else return coordsFromRing(editableRing(parsed));
-        return coords;
-      }
-    }
-  }catch(err){}
   if(isCoordCollection(bakedCoords))return editableCoordsFromCoords(bakedCoords);
   return deepClone(DEFAULT_DYNASTY_COORDS.get(dynastyId)||[]);
 }
@@ -4151,13 +4120,6 @@ function stopPlay(){
 }
 
 loadSavedDynasties();
-loadLabelTweaks();
-loadLabelPlacements();
-loadLabelEdits();
-// Liao mialo zapisana przestarzala pozycje etykiety poza swoim obszarem.
-delete labelPlacements.liao;
-delete labelPlacements[labelScopeKey('liao',907)];
-saveLabelPlacements();
 update(-400);
 
 </script>
@@ -4180,13 +4142,9 @@ const mapSvg=document.getElementById('mapsvg');
 const mapWrap=document.getElementById('mapwrap');
 mapWrap.style.touchAction='none';
 
-const PROVINCE_VISIBILITY_STORAGE_KEY='atlas-province-boundaries-visible-v1';
 const provinceLayer=document.getElementById('provinceLayer');
 const provinceToggle=document.getElementById('provinceToggle');
-const storedProvinceVisibility=localStorage.getItem(PROVINCE_VISIBILITY_STORAGE_KEY);
-let provinceBoundariesVisible=storedProvinceVisibility===null
-  ? BAKED_MAP_STATE.provinceBoundariesVisible!==false
-  : storedProvinceVisibility!=='false';
+let provinceBoundariesVisible=BAKED_MAP_STATE.provinceBoundariesVisible!==false;
 
 function updateProvinceVisibility(){
   provinceLayer.classList.toggle('provinces-hidden',!provinceBoundariesVisible);
@@ -4196,7 +4154,6 @@ function updateProvinceVisibility(){
 
 provinceToggle.addEventListener('click',ev=>{
   provinceBoundariesVisible=!provinceBoundariesVisible;
-  try{localStorage.setItem(PROVINCE_VISIBILITY_STORAGE_KEY,String(provinceBoundariesVisible));}catch(err){}
   updateProvinceVisibility();
   ev.preventDefault();
   ev.stopPropagation();
@@ -4206,17 +4163,13 @@ updateProvinceVisibility();
 const CITY_LABEL_STORAGE_KEY='atlas-city-label-positions-v1';
 
 function restoreSavedCityLabelPositions(){
-  try{
-    const localPositions=JSON.parse(localStorage.getItem(CITY_LABEL_STORAGE_KEY)||'{}');
-    const savedPositions={...cloneBaseData(BAKED_MAP_STATE.cityLabels||{}),...localPositions};
-    if(!savedPositions || typeof savedPositions!=='object' || Array.isArray(savedPositions))return;
-    document.querySelectorAll('#geo circle + text').forEach(label=>{
-      const saved=savedPositions[label.textContent.trim()];
-      if(!saved || !Number.isFinite(saved.x) || !Number.isFinite(saved.y))return;
-      label.setAttribute('x',saved.x.toFixed(1));
-      label.setAttribute('y',saved.y.toFixed(1));
-    });
-  }catch(err){}
+  const savedPositions=BAKED_MAP_STATE.cityLabels||{};
+  document.querySelectorAll('#geo circle + text').forEach(label=>{
+    const saved=savedPositions[label.textContent.trim()];
+    if(!saved || !Number.isFinite(saved.x) || !Number.isFinite(saved.y))return;
+    label.setAttribute('x',saved.x.toFixed(1));
+    label.setAttribute('y',saved.y.toFixed(1));
+  });
 }
 
 restoreSavedCityLabelPositions();
@@ -4447,7 +4400,6 @@ function endRiverHandleDrag(ev){
 }
 
 removeLegacyBlueRivers();
-loadCustomRivers();
 renderCustomRivers();
 document.getElementById('startRiverEdit').addEventListener('click',startRiverEditing);
 document.getElementById('newRiver').addEventListener('click',resetRiverDraft);
