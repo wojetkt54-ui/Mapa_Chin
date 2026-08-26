@@ -4527,21 +4527,29 @@ updateTransform();
 
 const toggleBtn=document.getElementById('togglePanel');
 
+function syncMapAspectRatio(){
+  const panelHidden=document.body.classList.contains('hiddenPanel');
+  const mobileLayout=window.matchMedia('(max-width: 900px)').matches;
+  mapSvg.setAttribute('preserveAspectRatio',panelHidden && !mobileLayout?'xMidYMid slice':'xMidYMid meet');
+  requestAnimationFrame(()=>{
+    clampPanToZoom();
+    updateTransform();
+    renderCustomRivers();
+  });
+}
+
 toggleBtn.onclick=()=>{
   const hidden=document.body.classList.toggle('hiddenPanel');
-  mapSvg.setAttribute('preserveAspectRatio',hidden?'xMidYMid slice':'xMidYMid meet');
 
   if(hidden){
     toggleBtn.textContent='Pokaż opis';
   }else{
     toggleBtn.textContent='Ukryj opis';
   }
-  requestAnimationFrame(()=>{
-    clampPanToZoom();
-    updateTransform();
-    renderCustomRivers();
-  });
+  syncMapAspectRatio();
 };
+
+window.addEventListener('resize',syncMapAspectRatio);
 
 mapSvg.addEventListener('pointerdown',startPanDrag);
 window.addEventListener('pointermove',onPanPointerMove);
