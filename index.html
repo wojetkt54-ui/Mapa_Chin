@@ -4614,11 +4614,27 @@ function exportCurrentBoundarySnapshot(){
       if(isCoordCollection(resolved))coords[phase.from+':'+id]=deepClone(resolved);
     });
   });
-  const payload={version:1,createdAt:new Date().toISOString(),coords};
+  const cityLabels={};
+  document.querySelectorAll('#geo circle + text').forEach(label=>{
+    const x=Number(label.getAttribute('x'));
+    const y=Number(label.getAttribute('y'));
+    if(Number.isFinite(x) && Number.isFinite(y))cityLabels[label.textContent.trim()]={x,y};
+  });
+  const payload={
+    version:2,
+    createdAt:new Date().toISOString(),
+    coords,
+    labelTweaks:deepClone(labelTweaks),
+    labelPlacements:deepClone(labelPlacements),
+    labelEdits:deepClone(labelEdits),
+    customRivers:deepClone(customRivers),
+    cityLabels,
+    provinceBoundariesVisible
+  };
   const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
   const link=document.createElement('a');
   link.href=URL.createObjectURL(blob);
-  link.download='atlas-granice-bazowe.json';
+  link.download='atlas-stan-bazowy.json';
   document.body.appendChild(link);
   link.click();
   link.remove();
